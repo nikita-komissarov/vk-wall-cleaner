@@ -22,196 +22,65 @@
 3. Скопируйте и вставьте следующий скрипт в консоль:
 
 ```javascript
-// ================== НАСТРОЙКИ ==================
-const POSTS_PORTION_SIZE = 50; // Количество постов для загрузки за один раз
-const SCROLL_DELAY = 500; // Задержка между прокрутками (в миллисекундах)
-const DELETE_DELAY = 100; // Задержка между действиями при удалении (в миллисекундах)
-const MAX_ATTEMPTS = 20; // Максимальное количество попыток для загрузки новых постов
-const MAX_POSTS_TO_DELETE = Infinity; // Максимальное количество постов для удаления (Infinity для удаления всех)
-// ===============================================
-
-// Функция для проверки загрузки страницы
-async function waitForPageLoad() {
-    console.info('Ожидаем загрузки страницы...');
-    await new Promise(resolve => {
-        const interval = setInterval(() => {
-            const posts = document.querySelectorAll('._post');
-            if (posts.length > 0) {
-                clearInterval(interval);
-                resolve();
-            }
-        }, 500); // Проверяем каждые 500 мс
-    });
-    console.info('Страница загружена.');
+// Функция для прокрутки страницы вниз
+async function scrollPage() {
+    window.scrollBy(0, window.innerHeight); // Прокручиваем на высоту экрана
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Пауза для загрузки новых постов
 }
 
-// Функция для проверки удаления первого поста
-async function testDeleteFirstPost() {
-    // Находим первый пост на стене
-    const firstPost = document.querySelector('._post');
-
-    if (!firstPost) {
-        console.error('Посты не найдены. Проверьте, открыта ли стена.');
-        return false;
-    }
-
-    // Находим кнопку меню поста (используем более гибкий поиск)
-    const menuButton = firstPost.querySelector('.vkuiIconButton, [aria-label="Меню"]');
-    if (!menuButton) {
-        console.error('Кнопка меню поста не найдена. Возможно, интерфейс изменился.');
-        console.error('Попробуйте обновить страницу и запустить скрипт снова.');
-        return false;
-    }
-
-    menuButton.click(); // Открываем меню
-    await new Promise(resolve => setTimeout(resolve, DELETE_DELAY)); // Пауза для загрузки меню
-
-    // Используем XPath для поиска span с текстом "Удалить"
-    const xpath = "//span[contains(text(), 'Удалить')]";
-    const deleteButton = document.evaluate(
-        xpath,
-        document,
-        null,
-        XPathResult.FIRST_ORDERED_NODE_TYPE,
-        null
-    ).singleNodeValue;
-
-    if (!deleteButton) {
-        console.error('Кнопка "Удалить" не найдена. Возможно, интерфейс изменился.');
-        console.error('Попробуйте обновить страницу и запустить скрипт снова.');
-        return false;
-    }
-
-    deleteButton.click(); // Нажимаем "Удалить"
-    await new Promise(resolve => setTimeout(resolve, DELETE_DELAY)); // Пауза для подтверждения
-
-    console.info('Проверка прошла успешно: первый пост удален.');
-    return true;
-}
-
-// Функция для загрузки порции постов
-async function loadPostsPortion() {
-    let previousPostCount = 0;
-    let attempts = 0; // Счетчик попыток, чтобы избежать бесконечного цикла
+// Функция для удаления постов
+async function deletePosts() {
+    let previousPostCount = 0; // Счетчик постов для контроля завершения
 
     while (true) {
-        // Прокручиваем страницу вниз на высоту экрана
-        window.scrollBy(0, window.innerHeight);
-
-        // Ждем указанное время для загрузки новых постов
-        await new Promise(resolve => setTimeout(resolve, SCROLL_DELAY));
-
         // Находим все посты на стене
         const posts = document.querySelectorAll('._post');
 
-        // Логируем прогресс загрузки с указанием номера попытки
-        console.info(`Попытка ${attempts + 1}/${MAX_ATTEMPTS}: Загружено постов: ${posts.length}. Прогресс: ${((posts.length / POSTS_PORTION_SIZE) * 100).toFixed(2)}%`);
+        if (posts.length === 0) {
+            console.log('Посты не найдены.');
+            break;
+        }
 
         // Если количество постов не изменилось, значит, новых постов больше нет
         if (posts.length === previousPostCount) {
-            attempts++;
-            if (attempts >= MAX_ATTEMPTS) { // Если попытки исчерпаны, завершаем
-                console.info('Загрузка постов завершена.');
-                break;
-            }
-        } else {
-            attempts = 0; // Сбрасываем счетчик, если посты загрузились
-        }
-
-        // Если загружено достаточно постов, завершаем загрузку порции
-        if (posts.length >= POSTS_PORTION_SIZE) {
-            console.info(`Загружено ${posts.length} постов. Переходим к удалению.`);
+            console.log('Все посты удалены.');
             break;
         }
 
         previousPostCount = posts.length; // Обновляем счетчик
-    }
-}
 
-// Функция для удаления порции постов
-async function deletePostsPortion() {
-    // Находим все посты на стене
-    const posts = document.querySelectorAll('._post');
+        // Удаляем каждый пост
+        for (const post of posts) {
+            // Находим кнопку меню поста
+            const menuButton = post.querySelector('.vkuiIconButton');
+            if (menuButton) {
+                menuButton.click(); // Открываем меню
+                await new Promise(resolve => setTimeout(resolve, 100)); // Пауза для загрузки меню
 
-    if (posts.length === 0) {
-        console.info('Посты не найдены.');
-        return;
-    }
+                // Используем XPath для поиска span с текстом "Удалить"
+                const xpath = "//span[contains(text(), 'Удалить')]";
+                const deleteButton = document.evaluate(
+                    xpath,
+                    document,
+                    null,
+                    XPathResult.FIRST_ORDERED_NODE_TYPE,
+                    null
+                ).singleNodeValue;
 
-    let postNumber = 1; // Номер текущего поста
-
-    // Удаляем каждый пост
-    for (const post of posts) {
-        // Находим кнопку меню поста (используем более гибкий поиск)
-        const menuButton = post.querySelector('.vkuiIconButton, [aria-label="Меню"]');
-        if (menuButton) {
-            menuButton.click(); // Открываем меню
-            await new Promise(resolve => setTimeout(resolve, DELETE_DELAY)); // Пауза для загрузки меню
-
-            // Используем XPath для поиска span с текстом "Удалить"
-            const xpath = "//span[contains(text(), 'Удалить')]";
-            const deleteButton = document.evaluate(
-                xpath,
-                document,
-                null,
-                XPathResult.FIRST_ORDERED_NODE_TYPE,
-                null
-            ).singleNodeValue;
-
-            if (deleteButton) {
-                deleteButton.click(); // Нажимаем "Удалить"
-                await new Promise(resolve => setTimeout(resolve, DELETE_DELAY)); // Пауза перед следующим
+                if (deleteButton) {
+                    deleteButton.click(); // Нажимаем "Удалить"
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Пауза перед следующим
+                }
             }
         }
 
-        postNumber++; // Увеличиваем номер поста
-    }
-
-    console.info('Порция постов удалена.');
-}
-
-// Основная функция
-async function main() {
-    console.info('Ожидаем загрузки страницы...');
-    await waitForPageLoad(); // Ждем загрузки страницы
-
-    console.info('Проверяем возможность удаления первого поста...');
-    const isTestSuccessful = await testDeleteFirstPost();
-
-    if (!isTestSuccessful) {
-        console.error('Скрипт не может удалить посты. Возможно, интерфейс ВКонтакте изменился.');
-        console.error('Попробуйте обновить страницу и запустить скрипт снова.');
-        return;
-    }
-
-    let totalDeleted = 0; // Общее количество удаленных постов
-
-    while (true) {
-        console.info('Начинаем загрузку порции постов...');
-        await loadPostsPortion(); // Загружаем порцию постов
-
-        const posts = document.querySelectorAll('._post');
-        if (posts.length === 0) {
-            console.info('Все посты удалены.');
-            break;
-        }
-
-        console.info('Начинаем удаление порции постов...');
-        await deletePostsPortion(); // Удаляем порцию постов
-
-        totalDeleted += posts.length;
-        console.info(`Всего удалено постов: ${totalDeleted}`);
-
-        // Если достигнут лимит удаления, завершаем
-        if (totalDeleted >= MAX_POSTS_TO_DELETE) {
-            console.info(`Достигнут лимит удаления (${MAX_POSTS_TO_DELETE} постов).`);
-            break;
-        }
+        // Прокручиваем страницу вниз для загрузки новых постов
+        await scrollPage();
     }
 }
 
-// Запуск основной функции
-main();
+// Запуск функции
+deletePosts();
 ```
 4. Нажмите Enter и дождитесь завершения процесса.
 
