@@ -25,7 +25,7 @@
 // Функция для прокрутки страницы вниз
 async function scrollPage() {
     window.scrollBy(0, window.innerHeight); // Прокручиваем на высоту экрана
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Пауза для загрузки новых постов
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Пауза для загрузки новых постов
 }
 
 // Функция для удаления постов
@@ -55,7 +55,7 @@ async function deletePosts() {
             const menuButton = post.querySelector('.vkuiIconButton');
             if (menuButton) {
                 menuButton.click(); // Открываем меню
-                await new Promise(resolve => setTimeout(resolve, 500)); // Пауза для загрузки меню
+                await new Promise(resolve => setTimeout(resolve, 150)); // Пауза для загрузки меню
 
                 // Используем XPath для поиска span с текстом "Удалить"
                 const xpath = "//span[contains(text(), 'Удалить')]";
@@ -69,7 +69,7 @@ async function deletePosts() {
 
                 if (deleteButton) {
                     deleteButton.click(); // Нажимаем "Удалить"
-                    await new Promise(resolve => setTimeout(resolve, 500)); // Пауза перед следующим
+                    await new Promise(resolve => setTimeout(resolve, 150)); // Пауза перед следующим
                 }
             }
         }
