@@ -142,9 +142,6 @@ async function deletePostsPortion() {
 
     // Удаляем каждый пост
     for (const post of posts) {
-        // Логируем прогресс удаления
-        console.info(`Удаляем пост №${postNumber}. Осталось постов: ${posts.length - postNumber + 1}. Прогресс: ${((postNumber / posts.length) * 100).toFixed(2)}%`);
-
         // Находим кнопку меню поста (используем более гибкий поиск)
         const menuButton = post.querySelector('.vkuiIconButton, [aria-label="Меню"]');
         if (menuButton) {
